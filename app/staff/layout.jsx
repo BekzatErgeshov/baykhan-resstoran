@@ -1,0 +1,148 @@
+"use client";
+
+import { createContext, useContext, useEffect, useState } from "react";
+import { useRouter, usePathname } from "next/navigation";
+import Link from "next/link";
+import { motion } from "framer-motion";
+import { ShieldCheck, LogOut, Calendar, Utensils, Wallet } from "lucide-react";
+import { getStaffSession, clearStaffSession } from "@/lib/staffSession";
+import { clearPosSession } from "@/lib/waiterSession";
+import { RESTAURANT } from "@/lib/constants";
+import { cn } from "@/lib/utils";
+
+const StaffSessionContext = createContext(null);
+
+export function useStaffSession() {
+  return useContext(StaffSessionContext);
+}
+
+export default function StaffLayout({ children }) {
+  const router = useRouter();
+  const pathname = usePathname();
+  const [session, setSession] = useState(undefined); // undefined = still checking
+
+  // Auth gate
+  useEffect(() => {
+    const s = getStaffSession();
+    if (!s) {
+      router.replace("/team");
+      return;
+    }
+    setSession(s);
+  }, [router]);
+
+  if (session === undefined) {
+    return (
+      <div className="min-h-screen grid place-items-center">
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 0.1 }}
+          className="flex flex-col items-center gap-3 text-stone-500"
+        >
+          <ShieldCheck size={20} className="text-burgundy-600 animate-pulse-glow" />
+          <span className="text-[11px] uppercase tracking-[0.3em]">
+            Проверка доступа…
+          </span>
+        </motion.div>
+      </div>
+    );
+  }
+
+  function handleLogout() {
+    clearStaffSession();
+    clearPosSession();
+    router.replace("/team");
+  }
+
+  return (
+    <StaffSessionContext.Provider value={session}>
+      <div className="min-h-screen flex flex-col">
+        {/* Compact staff top-bar */}
+        <header className="sticky top-0 z-30 border-b border-stone-200/80 bg-white/80 backdrop-blur-md">
+          <div className="mx-auto max-w-7xl px-4 sm:px-6 h-14 flex items-center justify-between gap-4">
+            <Link
+              href="/staff"
+              className="flex items-center gap-2.5 group no-tap-highlight"
+            >
+              <img
+                src="/logo.png"
+                alt="Байхан Logo"
+                className="w-7 h-7 rounded-full object-cover border border-burgundy-200 shadow-sm"
+              />
+              <span className="font-display text-base tracking-[0.25em] text-stone-800">
+                {RESTAURANT.name}
+                <span className="ml-1.5 text-[9px] uppercase tracking-[0.35em] text-burgundy-600">
+                  staff
+                </span>
+              </span>
+            </Link>
+
+            {/* Section nav — visible to roles that have multiple pages */}
+            <nav className="hidden md:flex items-center gap-1.5 mr-auto pl-6">
+              {sectionsFor(session).map((s) => {
+                const active = pathname === s.href || (s.href !== "/staff" && pathname?.startsWith(s.href));
+                return (
+                  <Link
+                    key={s.href}
+                    href={s.href}
+                    className={cn(
+                      "inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] uppercase tracking-wider border transition-colors",
+                      active
+                        ? "bg-burgundy-500/15 text-burgundy-700 border-burgundy-500/50"
+                        : "text-stone-500 border-stone-200 hover:border-burgundy-400/40"
+                    )}
+                  >
+                    <s.icon size={12} />
+                    {s.label}
+                  </Link>
+                );
+              })}
+            </nav>
+
+            <div className="flex items-center gap-3 sm:gap-4">
+              <div className="hidden sm:block text-right leading-tight">
+                <div className="text-[13px] text-stone-800 font-medium">{session.name}</div>
+                <div className="text-[9px] uppercase tracking-[0.3em] text-burgundy-600 font-semibold">
+                  {session.role}
+                </div>
+              </div>
+
+              {/* Avatar dot — initials */}
+              <div className="w-8 h-8 rounded-full grid place-items-center bg-burgundy-50 border border-burgundy-200 text-[11px] font-bold text-burgundy-700 font-semibold">
+                {session.name
+                  .split(" ")
+                  .map((p) => p[0])
+                  .slice(0, 2)
+                  .join("")}
+              </div>
+
+              <button
+                type="button"
+                onClick={handleLogout}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-stone-200 text-stone-600 text-[11px] uppercase tracking-wider hover:text-red-600 hover:border-red-200 hover:bg-red-50/50 transition-colors"
+                aria-label="Выйти из портала"
+              >
+                <LogOut size={12} />
+                <span className="hidden sm:inline">Выйти</span>
+              </button>
+            </div>
+          </div>
+        </header>
+
+        <main className="flex-1">{children}</main>
+      </div>
+    </StaffSessionContext.Provider>
+  );
+}
+
+function sectionsFor(session) {
+  const exchange = { href: "/staff",   label: "Биржа смен", icon: Calendar };
+  const hall     = { href: "/waiter",  label: "Зал",        icon: Utensils };
+  const cashbox  = { href: "/cashier", label: "Касса",      icon: Wallet };
+  const role = session?.role;
+  if (role === "waiter")  return [hall, exchange];
+  if (role === "cashier") return [cashbox, exchange];
+  if (role === "manager" || role === "admin" || session?.is_admin) return [hall, cashbox, exchange];
+  return [exchange];
+}

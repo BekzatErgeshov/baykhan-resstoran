@@ -1,0 +1,218 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg: 253 251 247;   /* ivory */
+  --fg: 41 37 36;      /* stone-800 */
+  --accent: 92 26 27;  /* burgundy #5C1A1B */
+
+  --blob-1: rgba(92, 26, 27, 0.20);
+  --blob-2: rgba(142, 37, 48, 0.15);
+  --blob-3: rgba(220, 119, 128, 0.22);
+  --noise-opacity: 0.03;
+  --noise-blend: multiply;
+}
+
+.dark {
+  --bg: 26 14 16;       /* burgundy-near-black #1A0E10 */
+  --fg: 253 246 226;    /* cream #FDF6E2 */
+  --accent: 192 64 80;  /* lifted burgundy #C04050 */
+
+  --blob-1: rgba(140, 35, 50, 0.28);  /* deep burgundy */
+  --blob-2: rgba(192, 64, 80, 0.20);  /* lifted burgundy */
+  --blob-3: rgba(74, 20, 22, 0.22);   /* dark wine */
+  --noise-opacity: 0.06;
+  --noise-blend: screen;
+}
+
+html,
+body {
+  background: rgb(var(--bg));
+  color: rgb(var(--fg));
+  transition: background-color 0.3s, color 0.3s;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  /* Prevent any descendant from punching a horizontal scrollbar onto the page.
+     `overflow-x: clip` is preferred over `hidden` because it never establishes
+     a scrollport, so `position: sticky` inside still works (Navbar, summary). */
+  overflow-x: clip;
+}
+
+html {
+  /* Stable scrollbar gutter eliminates the ~15px width jump that triggers
+     during route changes when one page has a scrollbar and the next doesn't. */
+  scrollbar-gutter: stable;
+  /* iOS — block rubber-band reveal of off-canvas content during nav. */
+  overscroll-behavior-y: none;
+}
+
+::selection {
+  background: rgba(92, 26, 27, 0.22);
+  color: #1c1917; /* stone-900 */
+}
+
+/* Scrollbar — slim cream track with burgundy-hover thumb */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: #F8F3EA;
+  transition: background-color 0.3s;
+}
+.dark ::-webkit-scrollbar-track {
+  background: #1F1012;
+}
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #ECA9AE, #F8D7DA);
+  border-radius: 999px;
+  border: 2px solid #F8F3EA;
+}
+.dark ::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #C04050, #4A1416);
+  border: 2px solid #1F1012;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, #5C1A1B, #ECA9AE);
+}
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, #DC7780, #C04050);
+}
+
+@layer components {
+  /* Old "neon-text" / "gold-text" names preserved for backwards compatibility —
+     now render as a burgundy gradient. New code should use `.burgundy-text`. */
+  .neon-text,
+  .gold-text,
+  .burgundy-text {
+    background: linear-gradient(135deg, #8E2530 0%, #5C1A1B 35%, #C04050 55%, #8E2530 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    text-shadow: none;
+    transition: background 0.3s;
+  }
+
+  .dark .neon-text,
+  .dark .gold-text,
+  .dark .burgundy-text {
+    background: linear-gradient(135deg, #8E2530 0%, #C04050 35%, #ECA9AE 55%, #8E2530 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .neon-ring,
+  .gold-ring,
+  .burgundy-ring {
+    box-shadow:
+      0 0 0 1px rgba(92, 26, 27, 0.30),
+      0 12px 32px -10px rgba(92, 26, 27, 0.30);
+    transition: box-shadow 0.3s;
+  }
+
+  .dark .neon-ring,
+  .dark .gold-ring,
+  .dark .burgundy-ring {
+    box-shadow:
+      0 0 0 1px rgba(192, 64, 80, 0.30),
+      0 12px 32px -10px rgba(140, 35, 50, 0.40);
+  }
+
+  /* Premium light glass — soft, frosted, with a fine highlight border. */
+  .glass-panel {
+    background: rgba(255, 255, 255, 0.65);
+    backdrop-filter: blur(14px) saturate(150%);
+    -webkit-backdrop-filter: blur(14px) saturate(150%);
+    border: 1px solid rgba(255, 255, 255, 0.85);
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.04);
+    transition: background-color 0.3s, border-color 0.3s, box-shadow 0.3s;
+  }
+
+  .dark .glass-panel {
+    background: rgba(26, 14, 16, 0.82);
+    border: 1px solid rgba(192, 64, 80, 0.18);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  }
+
+  /* Same shape as the dark version but in warm stone — subtle line grid
+     used as a structural backdrop element. */
+  .grid-overlay {
+    background-image:
+      linear-gradient(rgba(92, 26, 27, 0.05) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(92, 26, 27, 0.05) 1px, transparent 1px);
+    background-size: 48px 48px;
+    mask-image: radial-gradient(ellipse at 50% 0%, #000 30%, transparent 70%);
+  }
+
+  /* Vignette warms the edges with a soft burgundy fade. */
+  .vignette::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: radial-gradient(
+      ellipse at 50% 60%,
+      transparent 55%,
+      rgba(60, 15, 18, 0.12) 100%
+    );
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+  .no-tap-highlight {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* WCAG 2.5.5 — minimum 44×44px hit target for interactive elements on touch.
+     Apply to buttons, links, and form fields. `touch-target-lg` for primary
+     CTAs on the booking and menu surfaces. */
+  .touch-target {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  .touch-target-lg {
+    min-height: 48px;
+    min-width: 48px;
+  }
+
+  /* Skeleton shimmer keyframe — referenced by components/ui/Skeleton.jsx
+     via animate-[shimmer_1.6s_infinite]. Lives at utility layer so it's
+     globally available without a Tailwind config entry. */
+  @keyframes shimmer {
+    100% { transform: translateX(100%); }
+  }
+}
+
+/* Honor users who request reduced motion — disable Framer-Motion-style
+   transforms and the skeleton pulse to save battery and prevent vestibular
+   discomfort. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Native date / time picker indicators tinted toward burgundy. */
+input[type="date"]::-webkit-calendar-picker-indicator,
+input[type="time"]::-webkit-calendar-picker-indicator {
+  filter: invert(20%) sepia(64%) saturate(2200%) hue-rotate(330deg) brightness(78%) contrast(96%);
+  opacity: 0.6;
+  cursor: pointer;
+  transition: opacity 0.18s;
+}
+input[type="date"]:hover::-webkit-calendar-picker-indicator,
+input[type="time"]:hover::-webkit-calendar-picker-indicator,
+input[type="date"]:focus::-webkit-calendar-picker-indicator,
+input[type="time"]:focus::-webkit-calendar-picker-indicator {
+  opacity: 1;
+}
